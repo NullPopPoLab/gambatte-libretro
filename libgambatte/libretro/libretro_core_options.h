@@ -63,7 +63,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "gambatte_gb_colorization",
       "GB Colorization",
       NULL,
-      "Enables colorization of Game Boy games. 'Auto' selects the 'best' (most colorful/appropriate) palette. 'GBC' selects game-specific Game Boy Color palette if defined, otherwise 'GBC - Dark Green'. 'SGB' selects game-specific Super Game Boy palette if defined, otherwise 'SGB - 1A', 'Internal' uses 'Internal Palette' core option. 'Custom' loads user-created palette from system directory.",
+      "Enables colorization of Game Boy games. 'Auto' selects the 'best' (most colorful/appropriate) palette. 'GBC' selects game-specific Game Boy Color palette if defined, otherwise 'GBC - Dark Green'. 'SGB' selects game-specific Super Game Boy palette if defined, otherwise 'SGB - 1A'. 'Internal' uses 'Internal Palette' core option. 'Custom' loads user-created palette from system directory.",
       NULL,
       NULL,
       {
@@ -138,6 +138,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "Special 4 (TI-83 Legacy)", NULL },
          { "TWB64 - Pack 1",           NULL },
          { "TWB64 - Pack 2",           NULL },
+         { "PixelShift - Pack 1",      NULL },
          { NULL, NULL },
       },
       "GB - DMG"
@@ -367,6 +368,63 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "TWB64 101 - 765PRO Pink"
    },
    {
+      "gambatte_gb_palette_pixelshift_1",
+      "> PixelShift - Pack 1 Palette",
+      NULL,
+      "Selects internal colorization palette when 'Internal Palette' is set to 'PixelShift - Pack 1'.",
+      NULL,
+      NULL,
+      {
+         { "PixelShift 01 - Arctic Green",               NULL },
+         { "PixelShift 02 - Arduboy",                    NULL },
+         { "PixelShift 03 - BGB 0.3 Emulator",           NULL },
+         { "PixelShift 04 - Camouflage",                 NULL },
+         { "PixelShift 05 - Chocolate Bar",              NULL },
+         { "PixelShift 06 - CMYK",                       NULL },
+         { "PixelShift 07 - Cotton Candy",               NULL },
+         { "PixelShift 08 - Easy Greens",                NULL },
+         { "PixelShift 09 - Gamate",                     NULL },
+         { "PixelShift 10 - Game Boy Light",             NULL },
+         { "PixelShift 11 - Game Boy Pocket",            NULL },
+         { "PixelShift 12 - Game Boy Pocket Alt",        NULL },
+         { "PixelShift 13 - Game Pocket Computer",       NULL },
+         { "PixelShift 14 - Game & Watch Ball",          NULL },
+         { "PixelShift 15 - GB Backlight Blue",          NULL },
+         { "PixelShift 16 - GB Backlight Faded",         NULL },
+         { "PixelShift 17 - GB Backlight Orange",        NULL },
+         { "PixelShift 18 - GB Backlight White ",        NULL },
+         { "PixelShift 19 - GB Backlight Yellow Dark",   NULL },
+         { "PixelShift 20 - GB Bootleg",                 NULL },
+         { "PixelShift 21 - GB Hunter",                  NULL },
+         { "PixelShift 22 - GB Kiosk",                   NULL },
+         { "PixelShift 23 - GB Kiosk 2",                 NULL },
+         { "PixelShift 24 - GB New",                     NULL },
+         { "PixelShift 25 - GB Nuked",                   NULL },
+         { "PixelShift 26 - GB Old",                     NULL },
+         { "PixelShift 27 - GBP Bivert",                 NULL },
+         { "PixelShift 28 - GB Washed Yellow Backlight", NULL },
+         { "PixelShift 29 - Ghost",                      NULL },
+         { "PixelShift 30 - Glow In The Dark",           NULL },
+         { "PixelShift 31 - Gold Bar",                   NULL },
+         { "PixelShift 32 - Grapefruit",                 NULL },
+         { "PixelShift 33 - Gray Green Mix",             NULL },
+         { "PixelShift 34 - Missingno",                  NULL },
+         { "PixelShift 35 - MS-Dos",                     NULL },
+         { "PixelShift 36 - Newspaper",                  NULL },
+         { "PixelShift 37 - Pip-Boy",                    NULL },
+         { "PixelShift 38 - Pocket Girl",                NULL },
+         { "PixelShift 39 - Silhouette",                 NULL },
+         { "PixelShift 40 - Sunburst",                   NULL },
+         { "PixelShift 41 - Technicolor",                NULL },
+         { "PixelShift 42 - Tron",                       NULL },
+         { "PixelShift 43 - Vaporwave",                  NULL },
+         { "PixelShift 44 - Virtual Boy",                NULL },
+         { "PixelShift 45 - Wish",                       NULL },
+         { NULL, NULL },
+      },
+      "PixelShift 01 - Arctic Green"
+   },
+   {
       "gambatte_gbc_color_correction",
       "Color Correction",
       NULL,
@@ -434,6 +492,40 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "0"
    },
    {
+      "gambatte_mix_frames",
+      "Interframe Blending",
+      NULL,
+      "Simulates LCD ghosting effects. 'Simple' performs a 50:50 mix of the current and previous frames. 'LCD Ghosting' mimics natural LCD response times by combining multiple buffered frames. 'Simple' blending is required when playing games that rely on LCD ghosting for transparency effects (Wave Race, Ballistic, Chikyuu Kaihou Gun ZAS...).",
+      NULL,
+      NULL,
+      {
+         { "disabled",          NULL },
+         { "mix",               "Simple" },
+         { "lcd_ghosting",      "LCD Ghosting (Accurate)" },
+         { "lcd_ghosting_fast", "LCD Ghosting (Fast)" },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "gambatte_audio_resampler",
+      "Audio Resampler",
+      NULL,
+      "Specify which algorithm to use when resampling generated audio (the Game Boy audio rate is limited only by its CPU write speed, such that 'native' frequencies are impractical on modern sound devices and must be downsampled). 'Sinc' produces the highest quality. 'Cosine' improves performance on low-end hardware.",
+      NULL,
+      NULL,
+      {
+         { "sinc", "Sinc" },
+         { "cc",   "Cosine" },
+         { NULL, NULL },
+      },
+#if (defined(PS2) || defined(PSP) || defined(VITA) || defined(_3DS) || defined(DINGUX))
+      "cc"
+#else
+      "sinc"
+#endif
+   },
+   {
       "gambatte_gb_hwmode",
       "Emulated Hardware (Restart Required)",
       NULL,
@@ -462,22 +554,6 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { NULL, NULL },
       },
       "enabled"
-   },
-   {
-      "gambatte_mix_frames",
-      "Interframe Blending",
-      NULL,
-      "Simulates LCD ghosting effects. 'Simple' performs a 50:50 mix of the current and previous frames. 'LCD Ghosting' mimics natural LCD response times by combining multiple buffered frames. 'Simple' blending is required when playing games that rely on LCD ghosting for transparency effects (Wave Race, Ballistic, Chikyuu Kaihou Gun ZAS...).",
-      NULL,
-      NULL,
-      {
-         { "disabled",          NULL },
-         { "mix",               "Simple" },
-         { "lcd_ghosting",      "LCD Ghosting (Accurate)" },
-         { "lcd_ghosting_fast", "LCD Ghosting (Fast)" },
-         { NULL, NULL },
-      },
-      "disabled"
    },
    {
       "gambatte_up_down_allowed",
@@ -1013,6 +1089,9 @@ struct retro_core_options_v2 *options_intl[RETRO_LANGUAGE_LAST] = {
    &options_he,    /* RETRO_LANGUAGE_HEBREW */
    &options_ast,   /* RETRO_LANGUAGE_ASTURIAN */
    &options_fi,    /* RETRO_LANGUAGE_FINNISH */
+   &options_id,    /* RETRO_LANGUAGE_INDONESIAN */
+   &options_sv,    /* RETRO_LANGUAGE_SWEDISH */
+   &options_uk,    /* RETRO_LANGUAGE_UKRAINIAN */
 };
 #endif
 
