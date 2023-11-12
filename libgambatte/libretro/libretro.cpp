@@ -1301,12 +1301,12 @@ static bool get_bootloader_from_file(void* userdata, bool isgbc, uint8_t* data, 
    /* Get BIOS type */
    if (isgbc)
    {
-      bios_name = "gbx/gbc_bios.bin";
+      bios_name = "gbc_bios.bin";
       bios_size = 0x900;
    }
    else
    {
-      bios_name = "gbx/gb_bios.bin";
+      bios_name = "gb_bios.bin";
       bios_size = 0x100;
    }
 
@@ -2511,7 +2511,7 @@ bool retro_load_game(const struct retro_game_info *info)
    }
 #endif
    
-   bool has_gbc_bootloader = file_present_in_system("gbx/gbc_bios.bin");
+   bool has_gbc_bootloader = file_present_in_system("gbc_bios.bin");
 
    unsigned flags = 0;
    struct retro_variable var = {0};
