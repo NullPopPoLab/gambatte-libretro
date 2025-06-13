@@ -40,6 +40,8 @@
 #include <algorithm>
 #include <cmath>
 
+#define CUSTOM_VERSION "+NC41"
+
 #ifdef _3DS
 extern "C" void* linearMemAlign(size_t size, size_t alignment);
 extern "C" void linearFree(void* mem);
@@ -1535,9 +1537,9 @@ void retro_get_system_info(struct retro_system_info *info)
 #define GIT_VERSION ""
 #endif
 #ifdef HAVE_NETWORK
-   info->library_version = "v0.5.0-netlink" GIT_VERSION;
+   info->library_version = "v0.5.0-netlink" GIT_VERSION CUSTOM_VERSION;
 #else
-   info->library_version = "v0.5.0" GIT_VERSION;
+   info->library_version = "v0.5.0" GIT_VERSION CUSTOM_VERSION;
 #endif
    info->need_fullpath = false;
    info->block_extract = false;
