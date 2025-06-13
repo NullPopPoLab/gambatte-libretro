@@ -1393,7 +1393,7 @@ static void update_input_state(void)
 
    if (libretro_supports_bitmasks)
    {
-      int16_t ret = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
+      int32_t ret = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MASK);
       for (i = 0; i < sizeof(input::btn_map) / sizeof(input::map); i++)
          res |= (ret & (1 << input::btn_map[i].snes)) ? input::btn_map[i].gb : 0;
 
