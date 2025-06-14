@@ -1398,15 +1398,15 @@ static void update_input_state(void)
          res |= (ret & (1 << input::btn_map[i].snes)) ? input::btn_map[i].gb : 0;
 
       libretro_ff_enabled = libretro_supports_ff_override &&
-            (ret & (1 << RETRO_DEVICE_ID_JOYPAD_R2));
+            (ret & (1 << RETRO_DEVICE_ID_JOYPAD_MENU));
 
       turbo_a = (ret & (1 << RETRO_DEVICE_ID_JOYPAD_X));
       turbo_b = (ret & (1 << RETRO_DEVICE_ID_JOYPAD_Y));
 
       if (palette_switch_enabled)
       {
-         palette_prev = (bool)(ret & (1 << RETRO_DEVICE_ID_JOYPAD_L));
-         palette_next = (bool)(ret & (1 << RETRO_DEVICE_ID_JOYPAD_R));
+         palette_prev = (bool)(ret & (1 << RETRO_DEVICE_ID_JOYPAD_L3));
+         palette_next = (bool)(ret & (1 << RETRO_DEVICE_ID_JOYPAD_R3));
       }
    }
    else
@@ -1422,8 +1422,8 @@ static void update_input_state(void)
 
       if (palette_switch_enabled)
       {
-         palette_prev = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L);
-         palette_next = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R);
+         palette_prev = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3);
+         palette_next = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
       }
    }
 
@@ -2486,7 +2486,7 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,     "Fast Forward" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MENU,   "Fast Forward" },
       { 0 },
    };
 
@@ -2501,8 +2501,8 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Prev. Internal Palette" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Next Internal Palette" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,     "Prev. Internal Palette" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,     "Next Internal Palette" },
       { 0 },
    };
 
@@ -2517,9 +2517,9 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,      "Prev. Internal Palette" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,      "Next Internal Palette" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2,     "Fast Forward" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,     "Prev. Internal Palette" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,     "Next Internal Palette" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MENU,   "Fast Forward" },
       { 0 },
    };
 
