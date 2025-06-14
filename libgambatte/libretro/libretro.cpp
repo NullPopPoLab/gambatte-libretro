@@ -89,7 +89,7 @@ TurboWork turboWork[TURBO_BUTTONS]={
 	{false,gambatte::InputGetter::START,0,0x2800,RETRO_DEVICE_ID_JOYPAD_START,RETRO_DEVICE_ID_JOYPAD_G1,"gambatte_turbo_speed_start"},
 	{false,gambatte::InputGetter::SELECT,0,0x2800,RETRO_DEVICE_ID_JOYPAD_SELECT,RETRO_DEVICE_ID_JOYPAD_G2,"gambatte_turbo_speed_select"},
 };
-unsigned turbo_ratio=0x6000;
+unsigned turbo_ratio=0x8000;
 
 static bool rom_loaded = false;
 
@@ -2198,7 +2198,7 @@ static void check_variables(bool startup)
 	{
 		turbo_ratio=0x10000-(atoi(var.value)*0x1000)&0xffff;
 	}
-	else turbo_ratio=0x6000;
+	else turbo_ratio=0x8000;
 
    rumble_level = 0;
    var.key      = "gambatte_rumble_level";
