@@ -65,19 +65,31 @@ static bool libretro_ff_enabled_prev            = false;
 
 static bool show_gb_link_settings = true;
 
-/* Minimum (and default) turbo pulse train
- * is 2 frames ON, 2 frames OFF */
-#define TURBO_PERIOD_MIN      4
-#define TURBO_PERIOD_MAX      120
-#define TURBO_PULSE_WIDTH_MIN 2
-#define TURBO_PULSE_WIDTH_MAX 15
-
 static unsigned libretro_input_state = 0;
 static bool up_down_allowed          = false;
-static unsigned turbo_period         = TURBO_PERIOD_MIN;
-static unsigned turbo_pulse_width    = TURBO_PULSE_WIDTH_MIN;
-static unsigned turbo_a_counter      = 0;
-static unsigned turbo_b_counter      = 0;
+
+#define TURBO_A 0
+#define TURBO_B 1
+#define TURBO_START 2
+#define TURBO_SELECT 3
+#define TURBO_BUTTONS 4
+
+typedef struct TurboWork_{
+	bool pressing;
+	uint32_t btnflg;
+	uint32_t counter;
+	uint32_t speed;
+	uint32_t dstbtn;
+	uint32_t srcbtn;
+	const char* config;
+} TurboWork;
+TurboWork turboWork[TURBO_BUTTONS]={
+	{false,gambatte::InputGetter::A,0,0x2800,RETRO_DEVICE_ID_JOYPAD_A,RETRO_DEVICE_ID_JOYPAD_X,"gambatte_turbo_speed_a"},
+	{false,gambatte::InputGetter::B,0,0x2800,RETRO_DEVICE_ID_JOYPAD_B,RETRO_DEVICE_ID_JOYPAD_Y,"gambatte_turbo_speed_b"},
+	{false,gambatte::InputGetter::START,0,0x2800,RETRO_DEVICE_ID_JOYPAD_START,RETRO_DEVICE_ID_JOYPAD_G1,"gambatte_turbo_speed_start"},
+	{false,gambatte::InputGetter::SELECT,0,0x2800,RETRO_DEVICE_ID_JOYPAD_SELECT,RETRO_DEVICE_ID_JOYPAD_G2,"gambatte_turbo_speed_select"},
+};
+unsigned turbo_ratio=0x6000;
 
 static bool rom_loaded = false;
 
@@ -1384,8 +1396,6 @@ static void update_input_state(void)
 {
    unsigned i;
    unsigned res                = 0;
-   bool turbo_a                = false;
-   bool turbo_b                = false;
    bool palette_prev           = false;
    bool palette_next           = false;
    bool palette_switch_enabled = (libretro_supports_set_variable &&
@@ -1400,8 +1410,9 @@ static void update_input_state(void)
       libretro_ff_enabled = libretro_supports_ff_override &&
             (ret & (1 << RETRO_DEVICE_ID_JOYPAD_MENU));
 
-      turbo_a = (ret & (1 << RETRO_DEVICE_ID_JOYPAD_X));
-      turbo_b = (ret & (1 << RETRO_DEVICE_ID_JOYPAD_Y));
+		for(TurboWork* tw=&turboWork[0];tw<&turboWork[TURBO_BUTTONS];++tw){
+			tw->pressing=!!(ret & (1 << tw->srcbtn));
+		}
 
       if (palette_switch_enabled)
       {
@@ -1417,8 +1428,9 @@ static void update_input_state(void)
       libretro_ff_enabled = libretro_supports_ff_override &&
             input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MENU);
 
-      turbo_a = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X);
-      turbo_b = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y);
+		for(TurboWork* tw=&turboWork[0];tw<&turboWork[TURBO_BUTTONS];++tw){
+			tw->pressing=input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, tw->srcbtn);
+		}
 
       if (palette_switch_enabled)
       {
@@ -1426,6 +1438,20 @@ static void update_input_state(void)
          palette_next = input_state_cb(0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3);
       }
    }
+
+	// turbo 
+	for(TurboWork* tw=&turboWork[0];tw<&turboWork[TURBO_BUTTONS];++tw){
+		if(tw->pressing){
+			if(!tw->speed)res|=tw->btnflg;
+			else{
+				tw->counter-=tw->speed;
+				if((tw->counter&0xffff)>=turbo_ratio)res|=tw->btnflg;
+			}
+		}
+		else{
+			tw->counter=0;
+		}
+	}	
 
    if (!up_down_allowed)
    {
@@ -1444,31 +1470,6 @@ static void update_input_state(void)
       set_fastforward_override(libretro_ff_enabled);
       libretro_ff_enabled_prev = libretro_ff_enabled;
    }
-
-   /* Handle turbo buttons */
-   if (turbo_a)
-   {
-      res |= (turbo_a_counter < turbo_pulse_width) ?
-            gambatte::InputGetter::A : 0;
-
-      turbo_a_counter++;
-      if (turbo_a_counter >= turbo_period)
-         turbo_a_counter = 0;
-   }
-   else
-      turbo_a_counter = 0;
-
-   if (turbo_b)
-   {
-      res |= (turbo_b_counter < turbo_pulse_width) ?
-            gambatte::InputGetter::B : 0;
-
-      turbo_b_counter++;
-      if (turbo_b_counter >= turbo_period)
-         turbo_b_counter = 0;
-   }
-   else
-      turbo_b_counter = 0;
 
    /* Handle internal palette switching */
    if (palette_prev || palette_next)
@@ -1649,10 +1650,6 @@ void retro_deinit(void)
 
    libretro_input_state = 0;
    up_down_allowed      = false;
-   turbo_period         = TURBO_PERIOD_MIN;
-   turbo_pulse_width    = TURBO_PULSE_WIDTH_MIN;
-   turbo_a_counter      = 0;
-   turbo_b_counter      = 0;
 
    deactivate_rumble();
    memset(&rumble, 0, sizeof(struct retro_rumble_interface));
@@ -2186,27 +2183,22 @@ static void check_variables(bool startup)
          up_down_allowed = false;
    }
 
-   turbo_period      = TURBO_PERIOD_MIN;
-   turbo_pulse_width = TURBO_PULSE_WIDTH_MIN;
-   var.key           = "gambatte_turbo_period";
-   var.value         = NULL;
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      turbo_period = atoi(var.value);
-      turbo_period = (turbo_period < TURBO_PERIOD_MIN) ?
-            TURBO_PERIOD_MIN : turbo_period;
-      turbo_period = (turbo_period > TURBO_PERIOD_MAX) ?
-            TURBO_PERIOD_MAX : turbo_period;
+	// turbo speed 
+	for(TurboWork* tw=&turboWork[0];tw<&turboWork[TURBO_BUTTONS];++tw){
+		var.key = tw->config;
+		if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+		{
+			tw->speed=atoi(var.value)*0x800;
+		}
+		else tw->speed=0x2800;
+	}
 
-      turbo_pulse_width = turbo_period >> 1;
-      turbo_pulse_width = (turbo_pulse_width < TURBO_PULSE_WIDTH_MIN) ?
-            TURBO_PULSE_WIDTH_MIN : turbo_pulse_width;
-      turbo_pulse_width = (turbo_pulse_width > TURBO_PULSE_WIDTH_MAX) ?
-            TURBO_PULSE_WIDTH_MAX : turbo_pulse_width;
-
-      turbo_a_counter = 0;
-      turbo_b_counter = 0;
-   }
+	var.key = "gambatte_turbo_ratio";
+	if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+	{
+		turbo_ratio=0x10000-(atoi(var.value)*0x1000)&0xffff;
+	}
+	else turbo_ratio=0x6000;
 
    rumble_level = 0;
    var.key      = "gambatte_rumble_level";
@@ -2466,12 +2458,14 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,     "D-Pad Up" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,   "D-Pad Down" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,  "D-Pad Right" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G1,     "Turbo Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G2,     "Turbo Select" },
       { 0 },
    };
 
@@ -2482,10 +2476,12 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,  "D-Pad Right" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G1,     "Turbo Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G2,     "Turbo Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MENU,   "Fast Forward" },
       { 0 },
    };
@@ -2495,12 +2491,14 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,     "D-Pad Up" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,   "D-Pad Down" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,  "D-Pad Right" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G1,     "Turbo Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G2,     "Turbo Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,     "Prev. Internal Palette" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,     "Next Internal Palette" },
       { 0 },
@@ -2511,12 +2509,14 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP,     "D-Pad Up" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN,   "D-Pad Down" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT,  "D-Pad Right" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A,      "A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,      "B" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,  "Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,      "Turbo A" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,      "Turbo B" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G1,     "Turbo Start" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_G2,     "Turbo Select" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3,     "Prev. Internal Palette" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3,     "Next Internal Palette" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_MENU,   "Fast Forward" },
